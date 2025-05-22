@@ -4,7 +4,13 @@ const Booking = require('../models/Booking')
 const Review = require('../models/Review')
 
 
-
+const checkAdmin = async (req, res, next) => {
+    try {
+        res.json({ message: "Admin Authorised", loggedinUser: req.user.id })
+    } catch (error) {
+        res.status(error.status || 500).json({ error: error.message || "Internal Server Message" })
+    }
+}
 
 
 const deleteUserProfile = async (req, res) => {
@@ -96,4 +102,4 @@ const getAllPayments = async (req, res) => {
         
     }
 }   
-module.exports = { deleteUserProfile ,getAllCustomer,getAllHost,getAllVehicles,getAllBookings,getAllReviews,getAllPayments}
+module.exports = { deleteUserProfile ,getAllCustomer,getAllHost,getAllVehicles,getAllBookings,getAllReviews,getAllPayments , checkAdmin}

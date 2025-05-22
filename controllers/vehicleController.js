@@ -9,7 +9,7 @@ const AddVehicle = async (req,res,next)=>{
         const role = req.user.role
         const {type,brand,model,year,registrationNumber,images,pricePerDay,isApproved,status,location} = req.body || {}
         if(isApproved || status){
-            if(role !== 'admin') return res.status(401).json({error:"User not authorised"})
+            if(role !== 'admin') return res.status(401).json({error:"User not authorised As Admin"})
         }
         if(!type || !brand || !model || !year || !registrationNumber ||  !pricePerDay || !location || !images){
             return res.status(400).json({error:"All Fields are Required"})
