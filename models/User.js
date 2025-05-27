@@ -29,6 +29,13 @@ const userSchema = new mongoose.Schema({
     licenseNumber: {
         type: String,
     },
+    profilepic: {
+        type: String,
+        
+    },
+    licenseProof: {
+        type: String
+    },
 
     addressProof: {
         type: String
@@ -43,9 +50,9 @@ userSchema.pre('validate', function (next) {
         this.invalidate('licenseNumber', 'License number is required for customers');
     }
 
-    if (this.role !== 'admin' && !this.addressProof) {
-        this.invalidate('addressProof', 'Address proof is required for non-admin users');
-    }
+   ` // if (this.role !== 'admin' && !this.addressProof) {
+    //     this.invalidate('addressProof', 'Address proof is required for non-admin users');
+    // }`
 
     next();
 });

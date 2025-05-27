@@ -50,19 +50,7 @@ const getAllHost = async (req, res) => {
         
     }
 }
-const getAllBookings = async (req, res) => {
-    try {
-        const bookings = await Booking.find()
-        if (!bookings) return res.status(404).json({ message: "No bookings found" }) 
-        res.status(200).json({ message: "Bookings retrieved successfully", bookings })
 
-    
-    } catch (error) {
-        console.log(error);
-        res.status(500).json({ message: "Internal server error" })
-        
-    }
-}
 const getAllVehicles = async (req, res) => {
     try {
         const vehicles = await Vehicle.find()
@@ -102,4 +90,4 @@ const getAllPayments = async (req, res) => {
         
     }
 }   
-module.exports = { deleteUserProfile ,getAllCustomer,getAllHost,getAllVehicles,getAllBookings,getAllReviews,getAllPayments , checkAdmin}
+module.exports = { deleteUserProfile ,getAllCustomer,getAllHost,getAllVehicles,getAllReviews,getAllPayments , checkAdmin}

@@ -1,30 +1,138 @@
-const Booking = requier('../models/Booking')
+const Booking = require('../models/Booking')
+const Vehicle = require('../models/Vehicle');
 
-const newBooking = async (req, res) => {
+const createBooking = async (req, res) => {
     try {
-        const { vehicleId,pickupLocation,dropoffLocation, startDate, endDate ,totalAmount } = req.body || {}
-        if (!vehicleId || !userId || !startDate || !endDate) {
-            return res.status(400).json({ error: "All Fields are Required" })
+        const userId = req.user.id;
+        const {
+            vehicleId,
+            pickupLatitude,
+            pickupLongitude,
+            pickupAddress,
+            dropoffLatitude,
+            dropoffLongitude,
+            dropoffAddress,
+            startDate,
+            endDate
+        } = req.body;
+
+
+        if (!vehicleId || !pickupLatitude || !pickupLongitude || !dropoffLatitude || !dropoffLongitude || !startDate || !endDate) {
+            return res.status(400).json({ error: 'All required fields must be provided' });
         }
-        const bookingExists = await Booking.findOne({ vehicleId, userId, startDate, endDate })
-        if (bookingExists) return res.status(400).json({ error: 'Booking Already Exists' })
 
-        const newBooking = new Booking({ userId,vehicleId,pickupLocation,dropoffLocation, startDate, endDate ,totalAmount })
-        const savedBooking = await newBooking.save()
 
-        res.status(201).json({ message: 'Booking Created', savedBooking })
+        const vehicle = await Vehicle.findById(vehicleId).populate('ownerId', 'name email phone');
+        if (!vehicle) {
+            return res.status(404).json({ error: 'Vehicle not found' });
+        }
+
+
+        const start = new Date(startDate);
+        const end = new Date(endDate);
+        const timeDiff = end - start;
+
+        if (timeDiff <= 0) {
+            return res.status(400).json({ error: 'Invalid date range' });
+        }
+
+
+        const overlappingBooking = await Booking.findOne({
+            vehicleId,
+            $or: [
+                {
+                    startDate: { $lte: end },
+                    endDate: { $gte: start }
+                }
+            ],
+            status: { $ne: 'cancelled' }
+        });
+
+        if (overlappingBooking) {
+            return res.status(409).json({ error: 'Vehicle is already booked in the selected date range' });
+        }
+
+
+
+        const days = Math.ceil(timeDiff / (1000 * 60 * 60 * 24));
+        const totalAmount = days * vehicle.pricePerDay;
+
+
+        const pickupLocation = {
+            type: 'Point',
+            coordinates: [parseFloat(pickupLongitude), parseFloat(pickupLatitude)],
+            address: pickupAddress || ''
+        };
+
+        const dropoffLocation = {
+            type: 'Point',
+            coordinates: [parseFloat(dropoffLongitude), parseFloat(dropoffLatitude)],
+            address: dropoffAddress || ''
+        };
+
+
+        const newBooking = new Booking({
+            userId,
+            vehicleId,
+            pickupLocation,
+            dropoffLocation,
+            startDate: start,
+            endDate: end,
+            totalAmount,
+            status: 'pending' // default
+        });
+
+        const savedBooking = await newBooking.save();
+
+        res.status(201).json({
+            message: 'Booking created successfully',
+            booking: savedBooking,
+            OwnerContact: {
+                name: vehicle.ownerId.name,
+                email: vehicle.ownerId.email,
+                phone: vehicle.ownerId.phone
+            },
+
+            vehicle: {
+                type: vehicle.type,
+                brand: vehicle.brand,
+                model: vehicle.model,
+                year: vehicle.year,
+                registrationNumber: vehicle.registrationNumber,
+
+            }
+
+        });
 
     } catch (error) {
-        console.log(error);
-        res.status(error.status || 500).json({ error: error.message || "Internal Server Message" })
+        console.error('Booking error:', error);
+        res.status(500).json({ error: 'Internal Server Error' });
+    }
+};
+
+
+const getBookingById = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const booking = await Booking.findById(id)
+            .populate('vehicleId')
+            .populate('userId', 'name email phone');    
+        if (!booking) {
+            return res.status(404).json({ error: 'Booking not found' });    
+        }
+        res.status(200).json({ message: 'Booking retrieved successfully', booking });
+    } catch (error) {
+        console.error('Error retrieving booking:', error);
+        res.status(500).json({ error: 'Internal Server Error' });
     }
 }
 
 const getBooking = async (req, res) => {
     try {
-        const booking = await Booking.find({ userId: req.user._id }).populate('vehicleId')
+        userId = req.user.id
+        const booking = await Booking.find({ userId: userId }).populate('vehicleId','type brand model year registrationNumber ')
         if (!booking) return res.status(404).json({ message: "No bookings found" })
-        res.status(200).json({ message: "Bookings retrieved successfully", booking })
+        res.status(200).json({ message: "Bookings retrieved successfully", booking})
 
     } catch (error) {
         console.log(error);
@@ -32,3 +140,101 @@ const getBooking = async (req, res) => {
 
     }
 }
+// get booking by owner id
+const getBookingByOwner = async (req, res) => {
+    try {
+        const ownerId = req.user.id;
+        const vehicles = await Vehicle.find({ ownerId }).select('_id');
+        const vehicleIds = vehicles.map(v => v._id);
+
+        if (vehicleIds.length === 0) {
+            return res.status(404).json({ message: "No vehicles found for this owner" });
+        }
+
+        
+        const bookings = await Booking.find({ vehicleId: { $in: vehicleIds } })
+            .populate('vehicleId')
+            .populate('userId', 'name email phone');
+
+        if (!bookings || bookings.length === 0) {
+            return res.status(404).json({ message: "No bookings found for this owner" });
+        }
+
+        res.status(200).json({ message: "Bookings retrieved successfully", bookings });
+
+    } catch (error) {
+        console.error('Error retrieving bookings by owner:', error);
+        res.status(500).json({ message: "Internal server error" });
+    }
+};
+const getAllBookings = async (req, res) => {
+    try {
+        const bookings = await Booking.find().populate('vehicleId').populate('userId', 'name email phone')
+        if (!bookings) return res.status(404).json({ message: "No bookings found" })
+        res.status(200).json({ message: "Bookings retrieved successfully", bookings })
+
+    } catch (error) {
+        console.log(error);
+        res.status(500).json({ message: "Internal server error" })
+
+    }
+}
+const updateBookingStatus = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { status } = req.body;
+
+        if (!status || !['pending', 'confirmed', 'completed', 'cancelled'].includes(status)) {
+            return res.status(400).json({ error: 'Invalid status' });
+        }
+
+        const updatedBooking = await Booking.findByIdAndUpdate(id, { status }, { new: true });
+
+        if (!updatedBooking) {
+            return res.status(404).json({ error: 'Booking not found' });
+        }
+
+        res.status(200).json({ message: 'Booking status updated successfully', booking: updatedBooking });
+
+    } catch (error) {
+        console.error('Error updating booking status:', error);
+        res.status(500).json({ error: 'Internal Server Error' });
+    }
+}
+const deleteBooking = async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        const deletedBooking = await Booking.findByIdAndDelete(id);
+        if (!deletedBooking) {
+            return res.status(404).json({ error: 'Booking not found' });
+        }
+        res.status(200).json({ message: 'Booking deleted successfully' });
+    } catch (error) {
+        console.error('Error deleting booking:', error);
+        res.status(500).json({ error: 'Internal Server Error' });
+    }
+}
+const deleteMyBooking = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const userId = req.user.id;
+
+        const booking = await Booking.findById(id);
+        if (!booking) {
+            return res.status(404).json({ error: 'Booking not found' });
+        }
+        if (booking.userId.toString() !== userId) {
+            return res.status(403).json({ error: 'You are not authorized to delete this booking' });
+        }
+        await Booking.findByIdAndDelete(id);
+        res.status(200).json({ message: 'Booking deleted successfully' });
+    }
+    catch (error) {
+        console.error('Error deleting booking:', error);
+        res.status(500).json({ error: 'Internal Server Error' });
+    }
+
+};
+
+module.exports = { createBooking, getBooking, getAllBookings, updateBookingStatus, deleteBooking, deleteMyBooking , getBookingByOwner ,getBookingById};
