@@ -2,12 +2,13 @@ const express = require('express')
 const adminRouter = express.Router()
 
 const {authAdmin} = require('../middleware/authMiddleware')
-const {getAllCustomer,getAllHost,getAllVehicles,getAllReviews,getAllPayments,deleteUserProfile, checkAdmin} = require('../controllers/adminController')
+const {getAllCustomer,getAllHost,getAllVehicles,getAllReviews,getAllPayments,deleteUserProfile} = require('../controllers/adminController')
 const {AddVehicle,updateVehicle,deleteVehicle,getVehicle,getVehiclebyOwner} = require('../controllers/vehicleController')
 const { getBookingById , getAllBookings, updateBookingStatus, deleteBooking} = require('../controllers/bookingController')
+const { checkUser } = require('../controllers/customerController')
 
 
-adminRouter.get('/check-Admin',authAdmin, checkAdmin )
+adminRouter.get('/check-Admin',authAdmin, checkUser )
 
 adminRouter.delete('/delete/:id',authAdmin,deleteUserProfile) //delete profile
 adminRouter.get('/getAllCustomers',authAdmin,getAllCustomer) //get all customers

@@ -1,6 +1,6 @@
 const express = require('express')
 const customerRouter = express.Router()
-const {register,login,profile,logout,updateProfile,addReview,getAllReviews, deleteMyReview,UpdatePassword} = require('../controllers/customerController')
+const {register,login,checkUser, profile,logout,updateProfile,addReview,getAllReviews, deleteMyReview,UpdatePassword} = require('../controllers/customerController')
 const {authUser} = require('../middleware/authMiddleware')
 const { getAllVehicles } = require('../controllers/adminController')
 const { getVehicle } = require('../controllers/vehicleController')
@@ -19,12 +19,15 @@ customerRouter.get('/getVehicle/:id',getVehicle) //get vehicle by id
 
 customerRouter.get('/profile',authUser,profile) //profile
 customerRouter.get('/logout',authUser,logout) //logout
+
+customerRouter.get('/checkUser' , authUser ,checkUser)
+
 customerRouter.patch('/update',authUser,updateProfile) //update profile
 customerRouter.patch('/updatePassword',authUser,UpdatePassword) //update password
 
 
 customerRouter.post('/review',authUser, addReview)
-customerRouter.get('/getAllReviews',authUser, getAllReviews) //get all reviews
+customerRouter.get('/getAllReviews',getAllReviews) //get all reviews
 customerRouter.delete('/deleteMyReview/:id',authUser, deleteMyReview) //delete my review
 
 

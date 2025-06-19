@@ -6,18 +6,17 @@ const createBooking = async (req, res) => {
         const userId = req.user.id;
         const {
             vehicleId,
-            pickupLatitude,
-            pickupLongitude,
+            
+            
             pickupAddress,
-            dropoffLatitude,
-            dropoffLongitude,
+            
             dropoffAddress,
             startDate,
             endDate
         } = req.body;
 
 
-        if (!vehicleId || !pickupLatitude || !pickupLongitude || !dropoffLatitude || !dropoffLongitude || !startDate || !endDate) {
+        if (!vehicleId || !pickupAddress ||  !dropoffAddress  || !startDate || !endDate) {
             return res.status(400).json({ error: 'All required fields must be provided' });
         }
 

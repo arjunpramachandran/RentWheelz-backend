@@ -22,6 +22,17 @@ const vehicleSchema = new mongoose.Schema({
         type: Number,
         required: true
     },
+    fuel: {
+        type: String,
+        enum: ['petrol', 'diesel', 'electric'],
+        required: true
+    },
+    transmission: {
+        type: String,
+        enum: ['manual', 'automatic'],
+        required: true
+    },
+
     registrationNumber: {
         type: String,
         required: true,
@@ -44,27 +55,24 @@ const vehicleSchema = new mongoose.Schema({
         enum: ['available', 'booked', 'inactive'],
         default: 'available'
     },
+    driver:{
+        type:Boolean
+    },
     location: {
         type: {
             type: String,
-            enum: ['Point'],
-            default: 'Point'
-        },
-        coordinates: {
-            type: [Number], // [longitude, latitude]
-            default:[0,0],
-            required: false
-        },
-        updatedAt: {
-            type: Date,
-            default: Date.now
         }
+
+    },
+    updatedAt: {
+        type: Date,
+        default: Date.now
     }
 
 },
-{
-    timestamps:true
-}
+    {
+        timestamps: true
+    }
 );
 
 module.exports = mongoose.model('Vehicle', vehicleSchema);

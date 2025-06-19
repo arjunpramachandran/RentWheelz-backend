@@ -9,7 +9,7 @@ const { cloudinaryInstance } = require('../config/cloudinary')
 
 const register = async (req, res, next) => {
     try {
-        const { name, email, password, phone, role, licenseNumber, profilepic, licenseProof, addressProof } = req.body || {}
+        const { name, email, password, phone, role, licenseNumber, addressProofId, profilepic, licenseProof, addressProof } = req.body || {}
         const file = req.files || {}
 
         if (!name || !email || !password || !phone ||
@@ -22,6 +22,10 @@ const register = async (req, res, next) => {
 
         const userExistsPhone = await User.findOne({ phone })
         if (userExistsPhone) return res.status(400).json({ error: 'User Already Exists with Same Phone Number' })
+        const userExistsLicense = await User.findOne({ licenseNumber })
+        if (userExistsLicense && role === "customer") return res.status(400).json({ error: 'User Already Exists with Same License Number' })
+        const userExistsAddressProof = await User.findOne({ addressProofId })
+        if (userExistsAddressProof ) return res.status(400).json({ error: 'User Already Exists with Same Address Proof' })
 
         const salt = await bcrypt.genSalt(10)
         const hashedPassword = await bcrypt.hash(password, salt)
@@ -48,6 +52,7 @@ const register = async (req, res, next) => {
             phone,
             role,
             licenseNumber: role !== "customer" ? null : licenseNumber,
+            addressProofId: role === "admin" ? null : addressProofId,
             profilepic: uploadProfilepic?.url || null,
             licenseProof: uploadlicense?.url || null,
             addressProof: uploadaddress?.url || null
@@ -89,15 +94,15 @@ const login = async (req, res, next) => {
         const token = createToken(userExists._id, userExists.role)
         res.cookie('token', token, {
             httpOnly: true,
-            secure: process.env.NODE_ENV !== 'production',
+            secure: process.env.NODE_ENV === 'production',
             sameSite: 'strict',
-            //maxAge: 3 * 24 * 60 * 60 * 1000 
+            maxAge: 24 * 60 * 60 * 1000  
         });
 
         const userObject = userExists.toObject()
         delete userObject.password
 
-        return res.status(200).json({ message: "Login succesfull", userObject })
+        return res.status(200).json({ message: "Login succesfull",userObject })
 
 
 
@@ -106,6 +111,17 @@ const login = async (req, res, next) => {
         res.status(error.status || 500).json({ error: error.message || "Internal Server Message" })
     }
 }
+
+// Check User
+ const checkUser = async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id).select('-password');
+    if (!user) return res.status(401).json({ message: 'User not found' });
+    res.status(200).json({ user });
+  } catch (err) {
+    res.status(401).json({ message: 'Unauthorized' });
+  }
+};
 
 const profile = async (req, res, next) => {
     try {
@@ -216,7 +232,7 @@ const addReview = async (req, res, next) => {
 
 const getAllReviews = async (req, res) => {
     try {
-        const reviews = await Review.find()
+        const reviews = await Review.find().populate('userId', 'name profilepic role') // Populate userId with name and profilepic
         if (!reviews) return res.status(404).json({ message: "No reviews found" })
         res.status(200).json({ message: "Reviews retrieved successfully", reviews })
 
@@ -246,4 +262,4 @@ const deleteMyReview = async (req, res) => {
     }
 }
 
-module.exports = { register, login, profile, logout, updateProfile, UpdatePassword, addReview, getAllReviews, deleteMyReview };
+module.exports = { register, login,checkUser, profile, logout, updateProfile, UpdatePassword, addReview, getAllReviews, deleteMyReview };

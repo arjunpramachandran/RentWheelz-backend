@@ -8,16 +8,20 @@ const AddVehicle = async (req, res, next) => {
     try {
         const userId = req.user.id
         const role = req.user.role
-        const { type, brand, model, year, registrationNumber, pricePerDay, isApproved, status } = req.body || {}
+        const { type, brand, model, fuel, transmission, registrationNumber, isApproved, status } = req.body || {}
+        const year = parseInt(req.body.year, 10);
+        const pricePerDay = parseInt(req.body.pricePerDay, 10);
+        const latitude = parseFloat(req.body.latitude);
+        const longitude = parseFloat(req.body.longitude);
         const images = req.files || {}
+        console.log('🚗 Vehicle Data:', req.body);
         if (isApproved || status) {
             if (role !== 'admin') return res.status(401).json({ error: "User not authorised As Admin" })
         }
 
         // Location
 
-        const latitude = parseFloat(req.body.latitude);
-        const longitude = parseFloat(req.body.longitude);
+
 
         // Validate lat/lng
         if (!latitude || !longitude) {
@@ -34,12 +38,15 @@ const AddVehicle = async (req, res, next) => {
 
 
 
-        if (!type || !brand || !model || !year || !registrationNumber || !pricePerDay || !location) {
+        if (!type || !brand || !model || !year || !fuel || !transmission || !registrationNumber || !pricePerDay || !location) {
             console.log(type, brand, model, year, registrationNumber, pricePerDay);
             return res.status(400).json({ error: "All Fields are Required" })
         }
         console.log(location);
 
+        console.log('📦 Request Body:', req.body);
+        console.log('🖼 Uploaded Files:', req.files);
+        console.log('📍 Location:', req.body.latitude, req.body.longitude);
 
         vehicleExists = await Vehicle.findOne({ registrationNumber })
         if (vehicleExists) return res.status(400).json({ error: 'Vehicle Already Exists' })
@@ -60,13 +67,15 @@ const AddVehicle = async (req, res, next) => {
             brand,
             model,
             year,
+            fuel,
+            transmission,
             registrationNumber,
             images: uploadedImages,
             pricePerDay,
             isApproved,
             status,
             location
-           
+
         })
         const savedVehicle = await newVehicle.save()
         res.status(201).json({ message: 'Vehicle Added Successfully', vehicle: savedVehicle })
@@ -99,10 +108,7 @@ const updateVehicle = async (req, res, next) => {
             isApproved,
             status,
             location
-            // location: {                                    for geojson
-            //     type: 'Point',
-            //     coordinates: [location.longitude, location.latitude]
-            // }
+
         }, { new: true })
         res.status(200).json({ message: 'Vehicle Updated Successfully', vehicle: updatedVehicle })
 
