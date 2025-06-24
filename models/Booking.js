@@ -14,37 +14,24 @@ const bookingSchema = new mongoose.Schema({
     pickupLocation: {
         type: {
             type: String,
-            enum: ['Point'],
-            default: 'Point'
-        },
-        coordinates: {
-            type: [Number], // [longitude, latitude]
-            required: true
-        },
-        address: { type: String } // Optional: human-readable address
+        }
     },
 
-    dropoffLocation: {
-        type: {
-            type: String,
-            enum: ['Point'],
-            default: 'Point'
-        },
-        coordinates: {
-            type: [Number], // [longitude, latitude]
-            required: true
-        },
-        address: { type: String } // Optional
+    address:{
+        type:String
     },
-    startDate: {
+    pickupDateTime: {
         type: Date,
         required: true
     },
-    endDate: {
+    dropoffDateTime: {
         type: Date,
         required: true
     },
-    totalAmount: {
+    driverRequired:{
+        type:Boolean
+    },
+    totalBill: {
         type: Number,
         required: true
     },
@@ -53,10 +40,7 @@ const bookingSchema = new mongoose.Schema({
         enum: ['pending', 'confirmed', 'completed', 'cancelled'],
         default: 'pending'
     },
-    paymentId: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'Payment'
-    }
+    
 
 },
 {

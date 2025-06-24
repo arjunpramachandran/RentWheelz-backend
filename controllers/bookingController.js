@@ -4,19 +4,19 @@ const Vehicle = require('../models/Vehicle');
 const createBooking = async (req, res) => {
     try {
         const userId = req.user.id;
+        const { vehicleId } = req.params
+    
         const {
-            vehicleId,
-            
-            
-            pickupAddress,
-            
-            dropoffAddress,
-            startDate,
-            endDate
+            pickupLocation,
+            pickupDateTime,
+            dropoffDateTime,
+            address,
+            driverRequired,
+            totalBill
         } = req.body;
 
 
-        if (!vehicleId || !pickupAddress ||  !dropoffAddress  || !startDate || !endDate) {
+        if (!vehicleId || !address || !pickupLocation || !pickupDateTime || !dropoffDateTime) {
             return res.status(400).json({ error: 'All required fields must be provided' });
         }
 
@@ -27,8 +27,8 @@ const createBooking = async (req, res) => {
         }
 
 
-        const start = new Date(startDate);
-        const end = new Date(endDate);
+        const start = new Date(pickupDateTime);
+        const end = new Date(dropoffDateTime);
         const timeDiff = end - start;
 
         if (timeDiff <= 0) {
@@ -40,8 +40,8 @@ const createBooking = async (req, res) => {
             vehicleId,
             $or: [
                 {
-                    startDate: { $lte: end },
-                    endDate: { $gte: start }
+                    pickupDateTime: { $lte: end },
+                    dropoffDateTime: { $gte: start }
                 }
             ],
             status: { $ne: 'cancelled' }
@@ -51,33 +51,15 @@ const createBooking = async (req, res) => {
             return res.status(409).json({ error: 'Vehicle is already booked in the selected date range' });
         }
 
-
-
-        const days = Math.ceil(timeDiff / (1000 * 60 * 60 * 24));
-        const totalAmount = days * vehicle.pricePerDay;
-
-
-        const pickupLocation = {
-            type: 'Point',
-            coordinates: [parseFloat(pickupLongitude), parseFloat(pickupLatitude)],
-            address: pickupAddress || ''
-        };
-
-        const dropoffLocation = {
-            type: 'Point',
-            coordinates: [parseFloat(dropoffLongitude), parseFloat(dropoffLatitude)],
-            address: dropoffAddress || ''
-        };
-
-
         const newBooking = new Booking({
             userId,
             vehicleId,
             pickupLocation,
-            dropoffLocation,
-            startDate: start,
-            endDate: end,
-            totalAmount,
+            pickupDateTime: start,
+            dropoffDateTime: end,
+            driverRequired,
+            address,
+            totalBill,
             status: 'pending' // default
         });
 
@@ -115,9 +97,9 @@ const getBookingById = async (req, res) => {
         const { id } = req.params;
         const booking = await Booking.findById(id)
             .populate('vehicleId')
-            .populate('userId', 'name email phone');    
+            .populate('userId', 'name email phone');
         if (!booking) {
-            return res.status(404).json({ error: 'Booking not found' });    
+            return res.status(404).json({ error: 'Booking not found' });
         }
         res.status(200).json({ message: 'Booking retrieved successfully', booking });
     } catch (error) {
@@ -129,9 +111,9 @@ const getBookingById = async (req, res) => {
 const getBooking = async (req, res) => {
     try {
         userId = req.user.id
-        const booking = await Booking.find({ userId: userId }).populate('vehicleId','type brand model year registrationNumber ')
+        const booking = await Booking.find({ userId: userId }).populate('vehicleId', 'type brand model year registrationNumber ')
         if (!booking) return res.status(404).json({ message: "No bookings found" })
-        res.status(200).json({ message: "Bookings retrieved successfully", booking})
+        res.status(200).json({ message: "Bookings retrieved successfully", booking })
 
     } catch (error) {
         console.log(error);
@@ -150,7 +132,7 @@ const getBookingByOwner = async (req, res) => {
             return res.status(404).json({ message: "No vehicles found for this owner" });
         }
 
-        
+
         const bookings = await Booking.find({ vehicleId: { $in: vehicleIds } })
             .populate('vehicleId')
             .populate('userId', 'name email phone');
@@ -236,4 +218,4 @@ const deleteMyBooking = async (req, res) => {
 
 };
 
-module.exports = { createBooking, getBooking, getAllBookings, updateBookingStatus, deleteBooking, deleteMyBooking , getBookingByOwner ,getBookingById};
+module.exports = { createBooking, getBooking, getAllBookings, updateBookingStatus, deleteBooking, deleteMyBooking, getBookingByOwner, getBookingById };

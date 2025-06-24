@@ -8,32 +8,17 @@ const AddVehicle = async (req, res, next) => {
     try {
         const userId = req.user.id
         const role = req.user.role
-        const { type, brand, model, fuel, transmission, registrationNumber, isApproved, status } = req.body || {}
+        const { type, brand, model, fuel, transmission, registrationNumber, location,discription, driverAvailable, rateOfDriver, isApproved, status } = req.body || {}
         const year = parseInt(req.body.year, 10);
         const pricePerDay = parseInt(req.body.pricePerDay, 10);
-        const latitude = parseFloat(req.body.latitude);
-        const longitude = parseFloat(req.body.longitude);
+
         const images = req.files || {}
-        console.log('🚗 Vehicle Data:', req.body);
+        console.log(' Vehicle Data:', req.body);
         if (isApproved || status) {
             if (role !== 'admin') return res.status(401).json({ error: "User not authorised As Admin" })
         }
 
-        // Location
 
-
-
-        // Validate lat/lng
-        if (!latitude || !longitude) {
-            return res.status(400).json({ error: "Latitude and Longitude are required" });
-        }
-
-        // Construct GeoJSON location
-        const location = {
-            type: 'Point',
-            coordinates: [longitude, latitude], // [lng, lat]
-            updatedAt: new Date()
-        };
 
 
 
@@ -44,9 +29,7 @@ const AddVehicle = async (req, res, next) => {
         }
         console.log(location);
 
-        console.log('📦 Request Body:', req.body);
-        console.log('🖼 Uploaded Files:', req.files);
-        console.log('📍 Location:', req.body.latitude, req.body.longitude);
+
 
         vehicleExists = await Vehicle.findOne({ registrationNumber })
         if (vehicleExists) return res.status(400).json({ error: 'Vehicle Already Exists' })
@@ -73,8 +56,11 @@ const AddVehicle = async (req, res, next) => {
             images: uploadedImages,
             pricePerDay,
             isApproved,
+            discription,
             status,
-            location
+            location,
+            driverAvailable,
+            rateOfDriver
 
         })
         const savedVehicle = await newVehicle.save()
@@ -89,27 +75,59 @@ const AddVehicle = async (req, res, next) => {
 
 const updateVehicle = async (req, res, next) => {
     try {
+        userId = req.user.id
         const { id } = req.params
         const role = req.user.role
-        const { type, brand, model, year, registrationNumber, images, pricePerDay, isApproved, status, location } = req.body || {}
-        if (isApproved || status) {
-            if (role !== 'admin') return res.status(401).json({ error: "User not authorised" })
-        }
+        console.log(id,req.user);
 
-
-        const updatedVehicle = await Vehicle.findByIdAndUpdate(id, {
+        const {
             type,
             brand,
             model,
             year,
-            registrationNumber,
-            images,
             pricePerDay,
             isApproved,
             status,
-            location
+            location,
+            discription,
+            fuel,
+            transmission,
+            driverAvailable,
+            rateOfDriver
+        } = req.body || {};
 
-        }, { new: true })
+        const files = req.files || [];
+
+      
+        let uploadedImages = [];
+        if (files.length > 0) {
+            for (let file of files) {
+                const uploaded = await cloudinaryInstance.uploader.upload(file.path);
+                uploadedImages.push(uploaded.url);
+            }
+        }
+        const updateFields = {
+            ownerId: userId,
+            type,
+            brand,
+            model,
+            year,
+            fuel,
+            transmission,
+            pricePerDay,
+            isApproved,
+            status,
+            location,
+            discription,
+            driverAvailable,
+            rateOfDriver,
+        };
+
+
+        if (uploadedImages.length > 0) {
+            updateFields.images = uploadedImages;
+        }
+        const updatedVehicle = await Vehicle.findByIdAndUpdate(id, updateFields, { new: true })
         res.status(200).json({ message: 'Vehicle Updated Successfully', vehicle: updatedVehicle })
 
 

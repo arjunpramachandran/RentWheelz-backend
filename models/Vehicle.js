@@ -55,8 +55,14 @@ const vehicleSchema = new mongoose.Schema({
         enum: ['available', 'booked', 'inactive'],
         default: 'available'
     },
-    driver:{
-        type:Boolean
+    discription: {
+        type: String
+    },
+    driverAvailable: {
+        type: Boolean
+    },
+    rateOfDriver: {
+        type: Number
     },
     location: {
         type: {

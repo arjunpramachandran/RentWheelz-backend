@@ -9,7 +9,7 @@ const { cloudinaryInstance } = require('../config/cloudinary')
 
 const register = async (req, res, next) => {
     try {
-        const { name, email, password, phone, role, licenseNumber, addressProofId, profilepic, licenseProof, addressProof } = req.body || {}
+        const { name, email, password, phone, role, licenseNumber, addressProofId } = req.body || {}
         const file = req.files || {}
 
         if (!name || !email || !password || !phone ||
@@ -25,7 +25,7 @@ const register = async (req, res, next) => {
         const userExistsLicense = await User.findOne({ licenseNumber })
         if (userExistsLicense && role === "customer") return res.status(400).json({ error: 'User Already Exists with Same License Number' })
         const userExistsAddressProof = await User.findOne({ addressProofId })
-        if (userExistsAddressProof ) return res.status(400).json({ error: 'User Already Exists with Same Address Proof' })
+        if (userExistsAddressProof) return res.status(400).json({ error: 'User Already Exists with Same Address Proof' })
 
         const salt = await bcrypt.genSalt(10)
         const hashedPassword = await bcrypt.hash(password, salt)
@@ -42,7 +42,7 @@ const register = async (req, res, next) => {
             var uploadaddress = await cloudinaryInstance.uploader.upload(file.addressProof[0].path)
         }
 
-       
+
 
 
         const newUser = new User({
@@ -96,13 +96,13 @@ const login = async (req, res, next) => {
             httpOnly: true,
             secure: process.env.NODE_ENV === 'production',
             sameSite: 'strict',
-            maxAge: 24 * 60 * 60 * 1000  
+            maxAge: 24 * 60 * 60 * 1000
         });
 
         const userObject = userExists.toObject()
         delete userObject.password
 
-        return res.status(200).json({ message: "Login succesfull",userObject })
+        return res.status(200).json({ message: "Login succesfull", userObject })
 
 
 
@@ -113,14 +113,14 @@ const login = async (req, res, next) => {
 }
 
 // Check User
- const checkUser = async (req, res) => {
-  try {
-    const user = await User.findById(req.user.id).select('-password');
-    if (!user) return res.status(401).json({ message: 'User not found' });
-    res.status(200).json({ user });
-  } catch (err) {
-    res.status(401).json({ message: 'Unauthorized' });
-  }
+const checkUser = async (req, res) => {
+    try {
+        const user = await User.findById(req.user.id).select('-password');
+        if (!user) return res.status(401).json({ message: 'User not found' });
+        res.status(200).json({ user });
+    } catch (err) {
+        res.status(401).json({ message: 'Unauthorized' });
+    }
 };
 
 const profile = async (req, res, next) => {
@@ -153,56 +153,95 @@ const logout = async (req, res, next) => {
     }
 }
 
-const updateProfile = async (req, res, next) => {
+const updateProfile = async (req, res) => {
     try {
-        const userId = req.user.id
+        const userId = req.user.id;
+        const { name, email, phone, licenseNumber, addressProofId } = req.body || {};
+        const file = req.files || {};
 
-
-        const { name, email, phone, licenseNumber, addressProof, profilepic } = req.body || {}
-
-
+        console.log('Request body:', req.body);
+        console.log('Uploaded files:', req.files);
 
         if (email) {
-            userExistsEmail = await User.findOne({ email })
-            if (userExistsEmail) return res.status(400).json({ error: 'User Already Exists with same email ID' })
+            const userExistsEmail = await User.findOne({ email, _id: { $ne: userId } });
+            if (userExistsEmail)
+                return res.status(400).json({ error: 'User already exists with the same email' });
         }
+
 
         if (phone) {
-            const userExistsPhone = await User.findOne({ phone })
-            if (userExistsPhone) return res.status(400).json({ error: 'User Already Exists with Same PhoneNumber' })
+            const userExistsPhone = await User.findOne({ phone, _id: { $ne: userId } });
+            if (userExistsPhone)
+                return res.status(400).json({ error: 'User already exists with the same phone number' });
         }
 
-        // Password Update
-        // const salt = await bcrypt.genSalt(10)
-        // const hashedPassword = await bcrypt.hash(password,salt)
+
+        let profilepicUrl = null,
+            licenseProofUrl = null,
+            addressProofUrl = null;
+
+        if (file.profilepic) {
+            const uploaded = await cloudinaryInstance.uploader.upload(file.profilepic[0].path);
+            profilepicUrl = uploaded.secure_url;
+        }
+
+        if (file.licenseProof) {
+            const uploaded = await cloudinaryInstance.uploader.upload(file.licenseProof[0].path);
+            licenseProofUrl = uploaded.secure_url;
+        }
+
+        if (file.addressProof) {
+            const uploaded = await cloudinaryInstance.uploader.upload(file.addressProof[0].path);
+            addressProofUrl = uploaded.secure_url;
+        }
 
 
-        const updatedUser = await User.findByIdAndUpdate(userId, { name, email, phone, licenseNumber, addressProof, profilepic }, { new: true }).select('-password')
+        const user = await User.findById(userId);
+        if (!user) return res.status(404).json({ error: 'User not found' });
+
+        const updates = {
+            ...(name && { name }),
+            ...(email && { email }),
+            ...(phone && { phone }),
+            ...(profilepicUrl && { profilepic: profilepicUrl }),
+            ...(licenseProofUrl && { licenseProof: licenseProofUrl }),
+            ...(addressProofUrl && { addressProof: addressProofUrl }),
+        };
 
 
-        if (!updatedUser) return res.status(400).json({ error: 'Customer Not Found' })
-        res.status(201).json({ message: 'Profile Updated ', updatedUser })
+        if (user.role === 'customer') {
+            updates.licenseNumber = licenseNumber || user.licenseNumber;
+            updates.addressProofId = addressProofId || user.addressProofId;
+        }
+
+        const updatedUser = await User.findByIdAndUpdate(userId, updates, {
+            new: true,
+            runValidators: true,
+            select: '-password'
+        });
+
+        res.status(200).json({ message: 'Profile updated successfully', updatedUser });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: error.message || 'Internal Server Error' });
     }
-    catch (error) {
-        console.log(error);
-        res.status(error.status || 500).json({ error: error.message || "Internal Server Message" })
-    }
-}
+};
+
 const UpdatePassword = async (req, res, next) => {
     try {
         const userId = req.user.id
-        const { oldPassword, newPassword } = req.body || {}
+        const { oldpassword, newpassword } = req.body || {}
 
-        if (!oldPassword || !newPassword) return res.status(400).json({ error: "All Fields are Required" })
+        if (!oldpassword || !newpassword) return res.status(400).json({ error: "All Fields are Required" })
 
         const user = await User.findById(userId)
         if (!user) return res.status(400).json({ error: 'Customer Not Found' })
 
-        const passwordMatch = await bcrypt.compare(oldPassword, user.password)
+        const passwordMatch = await bcrypt.compare(oldpassword, user.password)
         if (!passwordMatch) return res.status(400).json({ error: "Invalid Old Password" })
 
         const salt = await bcrypt.genSalt(10)
-        const hashedNewPassword = await bcrypt.hash(newPassword, salt)
+        const hashedNewPassword = await bcrypt.hash(newpassword, salt)
 
         user.password = hashedNewPassword
         await user.save()
@@ -262,4 +301,4 @@ const deleteMyReview = async (req, res) => {
     }
 }
 
-module.exports = { register, login,checkUser, profile, logout, updateProfile, UpdatePassword, addReview, getAllReviews, deleteMyReview };
+module.exports = { register, login, checkUser, profile, logout, updateProfile, UpdatePassword, addReview, getAllReviews, deleteMyReview };

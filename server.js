@@ -11,8 +11,9 @@ const router = require('./routes/index')
 app.get('/',(req,res)=>{
   res.send('Hello World')
 })
-app.use(express.json())
 app.use(cookieParser())
+app.use(express.json())
+
 app.use('/uploads', express.static('uploads'));
 const clientURL = process.env.CLIENT_URL 
 app.use(cors({

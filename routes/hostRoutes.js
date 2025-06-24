@@ -10,7 +10,7 @@ const { checkUser } = require('../controllers/customerController')
 
 
 hostRouter.post('/addVehicle', authHost,upload.array('images'), AddVehicle) // add vehicle
-hostRouter.patch('/updateVehicle/:id', authHost, updateVehicle) // update vehicle
+hostRouter.patch('/updateVehicle/:id', authHost,upload.array('images'), updateVehicle) // update vehicle
 hostRouter.delete('/deleteVehicle/:id', authHost, deleteVehicle) // delete vehicle
 hostRouter.get('/getHostVehicle', authHost, getHostVehicle) // get vehicle
 hostRouter.get('/check-Host',authHost, checkUser)

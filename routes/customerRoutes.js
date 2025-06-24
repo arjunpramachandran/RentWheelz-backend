@@ -6,6 +6,7 @@ const { getAllVehicles } = require('../controllers/adminController')
 const { getVehicle } = require('../controllers/vehicleController')
 const upload = require('../middleware/multer')
 const { createBooking, getBooking, deleteMyBooking } = require('../controllers/bookingController')
+const { createCheckoutSession } = require('../controllers/paymentController')
 
 
 
@@ -22,7 +23,7 @@ customerRouter.get('/logout',authUser,logout) //logout
 
 customerRouter.get('/checkUser' , authUser ,checkUser)
 
-customerRouter.patch('/update',authUser,updateProfile) //update profile
+customerRouter.patch('/update',authUser,upload.fields([{name:'profilepic'},{name:'licenseProof'},{name:'addressProof'}]),updateProfile) //update profile
 customerRouter.patch('/updatePassword',authUser,UpdatePassword) //update password
 
 
@@ -31,11 +32,13 @@ customerRouter.get('/getAllReviews',getAllReviews) //get all reviews
 customerRouter.delete('/deleteMyReview/:id',authUser, deleteMyReview) //delete my review
 
 
-customerRouter.post('/createBooking', authUser,createBooking) //create booking
+customerRouter.post('/createBooking/:vehicleId', authUser,createBooking) //create booking
 customerRouter.get('/getBooking', authUser, getBooking ) //get booking by user id
 customerRouter.delete('/deleteMyBooking/:id', authUser,deleteMyBooking) //delete booking by id
 
 
+
+customerRouter.post('/create-checkout-session' , authUser,createCheckoutSession)
 
 
 
