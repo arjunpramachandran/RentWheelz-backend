@@ -30,7 +30,7 @@ const createCheckoutSession = async (req, res) => {
                 address,
                 driverRequired,
             },
-            success_url: `${process.env.CLIENT_URL}/user/vehicleBooking/${vehicleId}?success=true`,
+            success_url: `${process.env.CLIENT_URL}/user/payment-success?success=true`,
             cancel_url: `${process.env.CLIENT_URL}/user/vehicleBooking/${vehicleId}?success=false`,
         });
 
